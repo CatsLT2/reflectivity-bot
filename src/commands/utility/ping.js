@@ -8,7 +8,7 @@ module.exports = {
   async execute(interaction) {
     await interaction.reply({
       embeds: [embeds.info(
-        `**Gateway:** ${interaction.client.ws.ping}ms\n**Served by:** ${config.node.name} (${config.node.role})`,
+        `**Gateway:** ${interaction.client.ws.ping}ms\n**Served by:** ${config.node.name} (${config.node.role})\n**!r / !an shortcuts:** ${config.messageContent ? 'on' : 'off (MESSAGE_CONTENT=false)'}`,
         '🏓 Pong!',
       )],
     });

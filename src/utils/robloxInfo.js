@@ -52,6 +52,26 @@ async function fetchInfo(robloxId) {
   return data;
 }
 
+const nameCache = new Map(); // lowercase name -> { id, at }
+
+/** Username -> Roblox user ID via Roblox's public API (cached 5 min, including "not found"). */
+async function resolveUsername(name) {
+  const key = String(name).toLowerCase();
+  const hit = nameCache.get(key);
+  if (hit && Date.now() - hit.at < 5 * 60 * 1000) return hit.id;
+  let id = null;
+  try {
+    const res = await fetch('https://users.roblox.com/v1/usernames/users', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ usernames: [name], excludeBannedUsers: false }), signal: AbortSignal.timeout(4000),
+    });
+    if (res.ok) id = (await res.json()).data?.[0]?.id?.toString() ?? null;
+  } catch { /* offline / rate limited: treat as not found for now */ }
+  if (nameCache.size > 500) nameCache.clear();
+  nameCache.set(key, { id, at: Date.now() });
+  return id;
+}
+
 const num = (n) => (Number.isFinite(n) ? n.toLocaleString('en-US') : 'n/a');
 
 function infoEmbed(info) {
@@ -85,4 +105,4 @@ const snapshot = (info) => ({
   groups: info.groups, avatar: info.avatar, banned: info.banned, verified: info.verified,
 });
 
-module.exports = { fetchInfo, infoEmbed, snapshot, embeds };
+module.exports = { fetchInfo, resolveUsername, infoEmbed, snapshot, embeds };

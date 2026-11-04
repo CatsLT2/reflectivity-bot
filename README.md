@@ -142,7 +142,57 @@ One Roblox account can only be linked to one Discord account. No Roblox tokens a
 
 Health check: `https://YOUR-DOMAIN/health` should say `ok`.
 
-## 8. Adding features (no restart)
+## 8. Moderation, admin website and Roblox API
+
+**Cases.** `/warn`, `/kick`, `/ban` and `/unban` DM the member (best effort), perform the action and save a numbered case
+(who, why, when). Kicks, bans and unbans done **by hand in Discord** are recorded too (through the audit log; the bot needs the
+**View Audit Log** permission). Run `/importbans` once to add the bans the server already has.
+
+**Admin website:** `https://YOUR-DOMAIN/admin`
+- "Login with Discord". Allowed: Administrator or Manage Server in your server, plus anyone in `ADMIN_USER_IDS` / holding a role in `ADMIN_ROLE_IDS`. Access is re-checked every 5 minutes.
+- People with warns / kicks / bans, **10 per page** (the page size can't be changed from the URL). Search by Discord ID, @mention, Discord username,
+  or - if their Roblox account is linked - Roblox username, display name or ID. Filter by warns / kicks / bans.
+- Click a person for their profile: counts, whether they are currently banned, linked Roblox profile, recent tickets and their full history (10 per page).
+- Read-only: nothing can be changed from the website.
+
+Setup (once):
+1. discord.com/developers/applications -> your app -> **OAuth2**: copy the **Client Secret** and add the Redirect `https://YOUR-DOMAIN/admin/callback`.
+2. Put these in `.env` (same values on your PC and backup server): `DISCORD_CLIENT_SECRET=...` and `SESSION_SECRET=...` (32+ random characters, make one with
+   `node -e "console.log(require('crypto').randomBytes(32).toString('base64url'))"`), optionally `ADMIN_USER_IDS` / `ADMIN_ROLE_IDS`. Restart.
+
+**Roblox API** (for your game servers, protected by an API key)
+
+```
+GET  https://YOUR-DOMAIN/api/roblox?user=<Roblox username or numeric ID>[&page=2]
+POST https://YOUR-DOMAIN/api/roblox      {"user": "<username or ID>", "page": 1}
+Header:  X-API-Key: rbx_...        (or  Authorization: Bearer rbx_...)
+```
+Create a key with `/apikey create label:"main game"` - it is shown **once**; only a hash is stored. `/apikey revoke` kills it instantly.
+Keys are accepted from headers only (never the URL). Limits: 120 requests/min per key; 10 wrong keys/min per IP locks that IP for a minute.
+Response (`linked: false` if that Roblox account isn't linked to anyone):
+
+```json
+{ "ok": true, "linked": true,
+  "roblox":  { "id": "156", "username": "Builderman", "displayName": "Builder" },
+  "discord": { "id": "1000...", "username": "user00" },
+  "moderation": { "warns": 2, "kicks": 0, "bans": 1, "unbans": 0, "banned": true },
+  "cases": [ { "case": 12, "type": "ban", "reason": "...", "moderator": "modmike", "source": "bot", "pardoned": false, "createdAt": "2026-10-26T12:00:00.000Z" } ],
+  "page": 1, "pageSize": 10, "totalCases": 15, "totalPages": 2 }
+```
+Errors: `401 missing_api_key / invalid_api_key`, `400 invalid_input`, `429 rate_limited`. Roblox script (server `Script` only - never a LocalScript):
+
+```lua
+local HttpService = game:GetService("HttpService")
+local res = HttpService:RequestAsync({
+  Url = "https://YOUR-DOMAIN/api/roblox?user=" .. player.Name,
+  Method = "GET", Headers = { ["X-API-Key"] = API_KEY },
+})
+local data = HttpService:JSONDecode(res.Body)
+if data.linked and data.moderation.banned then player:Kick("Banned on Discord") end
+```
+(Enable *Allow HTTP Requests* in your game's Security settings. Store the key with Roblox's Secrets feature, not in plain code.)
+
+## 9. Adding features (no restart)
 
 Save a file in `commands/`, `events/` or `components/` while the bot runs. It is live in about a second.
 Slash commands are re-registered with Discord automatically when their definitions change.
@@ -174,7 +224,7 @@ matches any customId equal to `id` or starting with `id:`.
 
 Restart IS needed only for: `.env`, `core/`, `handlers/`, `models/`, `package.json`, or new gateway intents.
 
-## 9. Start on boot + auto-restart
+## 10. Start on boot + auto-restart
 
 ```
 npm run autostart          # Windows: Administrator terminal. Linux: sudo
@@ -183,7 +233,7 @@ npm run autostart:remove
 Windows creates a Scheduled Task (runs at boot, before login) using `start-bot.cmd`, which restarts the bot if it crashes.
 Linux installs a systemd service with `Restart=always`.
 
-## 10. Failover to a second server
+## 11. Failover to a second server
 
 Both machines run the **same code, same `.env` (same token + same MONGO_URI)**:
 

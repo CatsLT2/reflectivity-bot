@@ -12,6 +12,9 @@ const log = require('./utils/logger')('main');
 
 async function main() {
   log.info(`starting node "${config.node.name}" (role: ${config.node.role})`);
+  log.info(config.messageContent
+    ? '!r / !an shortcuts: ON (Message Content Intent requested)'
+    : '!r / !an shortcuts: OFF (MESSAGE_CONTENT=false in .env)');
 
   await db.connect();
   log.info('database connected');
@@ -31,6 +34,10 @@ async function main() {
     if (config.roblox.enabled) log.info(`Roblox redirect URL (must be registered in your Roblox app): ${config.roblox.redirectUri}`);
     else log.info('Roblox linking disabled (set ROBLOX_CLIENT_ID and ROBLOX_CLIENT_SECRET to enable)');
     log.info(`Transcripts will be served at ${config.web.publicUrl}/t/<token>`);
+    log.info(config.admin.enabled
+      ? `Admin site: ${config.web.publicUrl}/admin  (add ${config.web.publicUrl}/admin/callback as a Redirect in your Discord app's OAuth2 settings)`
+      : 'Admin site disabled (set DISCORD_CLIENT_SECRET and a SESSION_SECRET of 32+ characters in .env to enable)');
+    log.info(`Roblox API: ${config.web.publicUrl}/api/roblox?user=<name or ID>  (create keys with /apikey create)`);
     web.start();
   } else {
     log.info('PUBLIC_URL not set - web transcripts and Roblox linking are disabled (transcripts fall back to .txt files)');

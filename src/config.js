@@ -24,6 +24,7 @@ function baseUrl(raw) {
   if (!/^https?:\/\//i.test(v)) v = `https://${v}`;
   try { return new URL(v).origin; } catch { return ''; }
 }
+const list = (v) => String(v || '').split(',').map((x) => x.trim()).filter(Boolean);
 const publicUrl = baseUrl(process.env.PUBLIC_URL);
 if (process.env.PUBLIC_URL && !publicUrl) console.error(`PUBLIC_URL is not a valid web address: ${process.env.PUBLIC_URL}`);
 
@@ -37,6 +38,14 @@ module.exports = {
     host: process.env.WEB_HOST || '127.0.0.1',
     port: num(process.env.WEB_PORT, 3000),
     publicUrl,
+  },
+  // Admin website (/admin): "Login with Discord", restricted to admins. Needs PUBLIC_URL too.
+  admin: {
+    clientSecret: process.env.DISCORD_CLIENT_SECRET || '',
+    sessionSecret: process.env.SESSION_SECRET || '',
+    userIds: list(process.env.ADMIN_USER_IDS),
+    roleIds: list(process.env.ADMIN_ROLE_IDS),
+    enabled: Boolean(publicUrl && process.env.DISCORD_CLIENT_SECRET && (process.env.SESSION_SECRET || '').length >= 32),
   },
   roblox: {
     clientId: process.env.ROBLOX_CLIENT_ID || '',

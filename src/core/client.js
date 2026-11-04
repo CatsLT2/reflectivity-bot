@@ -8,6 +8,7 @@ const intents = [
   GatewayIntentBits.DirectMessages,
   GatewayIntentBits.GuildMessageTyping, // "typing..." relay: staff -> user
   GatewayIntentBits.DirectMessageTyping, // "typing..." relay: user -> staff
+  GatewayIntentBits.GuildModeration, // audit-log feed: catches kicks/bans done by hand in Discord (not privileged)
 ];
 // Privileged: enable "Message Content Intent" for your bot at discord.com/developers. Set MESSAGE_CONTENT=false to skip.
 if (config.messageContent) intents.push(GatewayIntentBits.MessageContent);
